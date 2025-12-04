@@ -1,79 +1,58 @@
 (function () {
-    const input = document.body.innerText;
+    const input = document.body.innerText.trim();
 
     const deltas = [
         [-1,-1],[-1,0],[-1,1],
         [ 0,-1],       [ 0,1],
         [ 1,-1],[ 1,0],[ 1,1]
     ];
+
+    function locations (grid) {
+        return [...new Array(grid.length)].flatMap(
+            (_, i) => [...new Array(grid[i].length)].map(
+                (_, j) => [i, j]
+            )
+        );
+    }
     
-    function partOne() {
-        const grid = input
-            .split("\n")
-            .filter(line => !!line)
-            .map(line => [...line]);
-        let accessibleCount = 0;
-        for (let i = 0; i < grid.length; i += 1) {
-            for (let j = 0; j < grid[0].length; j += 1) {
-                if (grid[i][j] !== "@") {
-                    continue;
-                }
-                let adjacentCount = 0;
-                for (let [di,dj] of deltas) {
-                    const ii = i + di;
-                    const jj = j + dj;
-                    if (ii < 0 || ii >= grid.length || jj < 0 || jj >= grid[0].length) {
-                        continue;
-                    }
-                    if (grid[ii][jj] === "@") {
-                        adjacentCount += 1;
-                    }
-                }
-                if (adjacentCount < 4) {
-                    accessibleCount += 1;
-                }
-            }
-        }
-        return accessibleCount;
+    function adjacentValues (grid, [i, j]) {
+        return deltas.map(([di, dj]) => [i + di, j + dj])
+            .filter(([ii, jj]) =>
+                ii >= 0 &&
+                ii < grid.length &&
+                jj >= 0 &&
+                jj < grid[ii].length
+            )
+            .map(([ii, jj]) => grid[ii][jj]);
     }
 
-    function partTwo() {
-        const grid = input
-            .split("\n")
-            .filter(line => !!line)
-            .map(line => [...line]);
+    function removableLocations (grid) {
+        return locations(grid)
+            .filter(([i, j]) =>
+                grid[i][j] === "@" &&
+                adjacentValues(grid, [i, j])
+                    .filter(c => c === "@")
+                    .length < 4
+           );
+    }
+
+    function partOne () {
+        const grid = input.split("\n").map(line => [...line])
+        return removableLocations(grid).length;
+    }
+
+    function partTwo () {
+        const grid = input.split("\n").map(line => [...line])
         let removedCount = 0;
-        let removedAny = true;
-        while (removedAny) {
-            removedAny = false;
-            let removables = [];
-            for (let i = 0; i < grid.length; i += 1) {
-                for (let j = 0; j < grid[0].length; j += 1) {
-                    if (grid[i][j] !== "@") {
-                        continue;
-                    }
-                    let adjacentCount = 0;
-                    for (let [di,dj] of deltas) {
-                        const ii = i + di;
-                        const jj = j + dj;
-                        if (ii < 0 || ii >= grid.length || jj < 0 || jj >= grid[0].length) {
-                            continue;
-                        }
-                        if (grid[ii][jj] === "@") {
-                            adjacentCount += 1;
-                        }
-                    }
-                    if (adjacentCount < 4) {
-                        removables.push([i,j]);
-                    }
-                }
+        let removedAny = false;
+        do {
+            const removable = removableLocations(grid);
+            removedAny = removable.length > 0;
+            removedCount += removable.length;
+            for (let [i, j] of removable) {
+                grid[i][j] = ".";
             }
-            for (let [i,j] of removables) {
-                removedAny = true;
-                grid[i][j] = "."
-                removedCount += 1;
-            }
-        }
+        } while (removedAny);
         return removedCount;
     }
 
