@@ -1,39 +1,53 @@
 (function () {
     const input = document.body.innerText.trim();
 
-    function partOne() {
+    function parse (input) {
         const [rangeBlock, idBlock] = input.split("\n\n");
-        const ranges = rangeBlock.split("\n").map(line => line.split("-").map(Number));
+        const ranges = rangeBlock.split("\n")
+            .map(line => line.split("-").map(Number));
         const ids = idBlock.split("\n").map(Number);
-        return ids.filter(id => ranges.some(([a, b]) => a <= id && id <= b)).length;
+        return { ranges, ids };
     }
 
-    function partTwo() {
-        const ranges = input
-            .split("\n\n")[0]
-            .split("\n")
-            .map(line => line
-                .split("-")
-                .map(Number))
-            .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    function rangeContains ([start, end], point) {
+        return start <= point && point <= end;
+    }
+    
+    function partOne() {
+        const { ranges, ids } = parse(input);
+        return ids.filter(id => ranges.some(r => rangeContains(r, id))).length;
+    }
 
-        const combined = [];
-        for (let i = 0; i < ranges.length; i += 1) {
-            const here = ranges[i];
-            const there = ranges[i + 1];
-            if (!there) {
-                combined.push(here);
-            } else if (here[1] >= there[1]) {
-                there[0] = here[0];
-                there[1] = here[1];
-            } else if (here[1] >= there[0]) {
-                there[0] = here[0];
+    function byStartThenByEnd (rangeA, rangeB) {
+        return rangeA[0] - rangeB[0] || rangeA[1] - rangeB[1];
+    }
+
+    function * combinedRanges (ranges) {
+        ranges.sort(byStartThenByEnd);
+
+        for (let i = 1; i < ranges.length; i += 1) {
+            const range = ranges[i];
+            const prevRange = ranges[i - 1];
+            if (prevRange[1] >= range[1]) {
+                // This range is entirely covered by the previous
+                range[0] = prevRange[0];
+                range[1] = prevRange[1];
+            } else if (prevRange[1] >= range[0]) {
+                // This range partially overlaps the previous
+                range[0] = prevRange[0];
             } else {
-                combined.push(here);
+                // This range is separate from the previous
+                yield prevRange;
             }
         }
 
-        return combined.map(([start, end]) => end - start + 1)
+        yield ranges.at(-1);
+    }
+    
+    function partTwo() {
+        const ranges = parse(input).ranges;
+        return Array.from(combinedRanges(ranges))
+            .map(([start, end]) => end - start + 1)
             .reduce((sum, x) => sum + x, 0);
     }
 
